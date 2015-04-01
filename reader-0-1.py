@@ -73,7 +73,7 @@ class ScrolledList(Frame):
         for item in d_list:      
             fparts = item.split('.')
             # DEBUG print fparts
-            if fparts[-1] == 'txt':
+            if fparts[-1] == 'csv':
                 self.listbox.insert(idx, item)                       
                 idx += 1
 
@@ -90,45 +90,64 @@ class ScrolledList(Frame):
         label = self.listbox.get(index)  
         self.passed_function((index,label))
 
-class PrintThis(object):
-    def __init__(self,a_path,gph):
-        self.f_path = a_path
-        self.gph = gph
-    
-    def print_this(self,selection):
-        (ind , filename) = selection
-        file = join(self.f_path,filename)
-        rawy = numpy.loadtxt(file, skiprows=1)
+
+class FileReaderViewer(object):
+    def __init__(self):
+        if len(sys.argv)==2:
+            self.mypath = sys.argv[1]
+        else:
+            self.mypath = getcwd()
+            
+        files = self.get_files()
+        
+        window  = Tk()
+        self.graph_viewer = TkinterGraph(window)
+        scrld = ScrolledList(window,files,lambda x: self.load_hunt_data(x))
+        
+        scrld.pack(side=LEFT,expand=YES, fill=Y) 
+        self.graph_viewer.pack(side=LEFT,expand=YES, fill=Y) 
+        window.mainloop()
+        
+    def load_pip_data(self,selection):
+        (self.ind , self.filename) = selection
+        d_file = join(self.mypath,self.filename)
+        rawy = numpy.loadtxt(d_file, skiprows=1)
         rawx = [i for i in range(len(rawy))]
-        self.gph.change_data(rawx,rawy)
-        #print 'You so selected this:', lbl, "from ",ind[0]
+        self.graph_viewer.change_data(rawx,rawy)
+
+    def load_hunt_data(self,selection):
+        (self.ind , self.filename) = selection
+        d_file = join(self.mypath,self.filename)
+        d_array=[]
+        with open(d_file) as f:
+            for line in f:
+                data = line.split(',')
+                if data[5]!='':
+                    print data[5],data[6]
+                    d_array.append(data[5])
+        rawy = numpy.array(d_array[1:])
+        rawx = [i for i in range(len(rawy))]
+        self.graph_viewer.change_data(rawx,rawy)
+        
+
+
+        
+
+    def get_files(self):
+        files = []
+        for filename in listdir(self.mypath):
+            # just get the files
+            # note that it has to have the compleate path and name
+            if isfile(join(self.mypath,filename)):
+                # split the file name in to parts 
+                files.append(filename)
+                #parts = filename.split('.')
+                #print parts[-1]
+        return files
 
 
 def main():
-    print len(sys.argv)
-    if len(sys.argv)==2:
-        mypath = sys.argv[1]
-    else:
-        mypath = getcwd()
-        
-    files = []
-    for filename in listdir(mypath):
-        # just get the files
-        # note that it has to have the compleate path and name
-        if isfile(join(mypath,filename)):
-            # split the file name in to parts 
-            files.append(filename)
-            #parts = filename.split('.')
-            #print parts[-1]
-
-    window  = Tk()
-    f1 = TkinterGraph(window)
-    prnt = PrintThis(mypath,f1)
-    scrld = ScrolledList(window,files,lambda x: prnt.print_this(x))
-    scrld.pack(side=LEFT,expand=YES, fill=Y) 
-    f1.pack(side=LEFT,expand=YES, fill=Y) 
-    window.mainloop()
-    
+    f = FileReaderViewer()
     return 0
 
 if __name__ == '__main__':
