@@ -24,10 +24,37 @@
 
 from os import listdir,getcwd
 from os.path import isfile, join
-
 from Tkinter import *
+import matplotlib
+matplotlib.use("TkAgg")
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+import sys
+import numpy
 
-     
+
+class TkinterGraph(Frame):
+
+    def __init__(self, parent):
+        Frame.__init__(self, parent)
+
+        self.figure = Figure(figsize=(10,10), dpi=50)
+        self.graph_a = self.figure.add_subplot(111)
+        self.graph_a.plot([1,2,3,4,5,6,7,8],[5,6,1,3,8,9,3,5])
+
+
+
+        self.canvas = FigureCanvasTkAgg(self.figure, self)
+        self.canvas.show()
+        self.canvas._tkcanvas.pack(side=TOP, fill=BOTH, expand=True)
+
+    def change_data(self,datay,datax):
+        self.graph_a.clear()
+        self.graph_a.plot(datay,datax)
+        self.canvas.draw()
+
+
+
 class ScrolledList(Frame):
     def __init__(self, master,d_list,a_function):
         Frame.__init__(self,master)
@@ -43,9 +70,12 @@ class ScrolledList(Frame):
         
         #load the listbox
         idx = 0
-        for item in d_list:                             
-            self.listbox.insert(idx, item)                       
-            idx += 1
+        for item in d_list:      
+            fparts = item.split('.')
+            # DEBUG print fparts
+            if fparts[-1] == 'txt':
+                self.listbox.insert(idx, item)                       
+                idx += 1
 
         # link double click to the processList
         self.listbox.bind('<Double-1>', self.processList)  
@@ -61,17 +91,26 @@ class ScrolledList(Frame):
         self.passed_function((index,label))
 
 class PrintThis(object):
-    def __init__(self):
-        pass
+    def __init__(self,a_path,gph):
+        self.f_path = a_path
+        self.gph = gph
     
     def print_this(self,selection):
-        (ind , lbl) = selection
-        print 'You so selected this:', lbl, "from ",ind[0]
+        (ind , filename) = selection
+        file = join(self.f_path,filename)
+        rawy = numpy.loadtxt(file, skiprows=1)
+        rawx = [i for i in range(len(rawy))]
+        self.gph.change_data(rawx,rawy)
+        #print 'You so selected this:', lbl, "from ",ind[0]
 
 
 def main():
-    mypath = "/home/pi/Downloads/"
-    #mypath = getcwd()
+    print len(sys.argv)
+    if len(sys.argv)==2:
+        mypath = sys.argv[1]
+    else:
+        mypath = getcwd()
+        
     files = []
     for filename in listdir(mypath):
         # just get the files
@@ -83,9 +122,11 @@ def main():
             #print parts[-1]
 
     window  = Tk()
-    prnt = PrintThis()
+    f1 = TkinterGraph(window)
+    prnt = PrintThis(mypath,f1)
     scrld = ScrolledList(window,files,lambda x: prnt.print_this(x))
-    scrld.pack(expand=YES, fill=BOTH) 
+    scrld.pack(side=LEFT,expand=YES, fill=Y) 
+    f1.pack(side=LEFT,expand=YES, fill=Y) 
     window.mainloop()
     
     return 0
