@@ -98,15 +98,6 @@ class ScrolledList(Frame):
         
     def remove_item(self,idx):
         self.listbox.delete(idx)
-
-class bicluster:
-  def __init__(self,vec,left=None,right=None,distance=0.0,id=None):
-    self.left=left
-    self.right=right
-    self.vec=vec
-    self.id=id
-    self.distance=distance
-
         
 class Reader(Frame):
   
@@ -114,7 +105,6 @@ class Reader(Frame):
         Frame.__init__(self, parent)   
         self.parent = parent
         self.initUI()
-        self.cluster=[]
         
     def initUI(self):
       
@@ -135,11 +125,6 @@ class Reader(Frame):
         menu.add_cascade(label="File", menu=filemenu)
         filemenu.add_command(label="Load data",command = self.load_data)
         filemenu.add_command(label="Test data",command = self.load_test_data)
-        
-        action_menu = Menu(menu)
-        menu.add_cascade(label="Process", menu=action_menu)
-        action_menu.add_command(label="Dendogram",command = self.calculate_differance)
-        
         
         # lable to show current file and chanel
         self.file_lbl = Label(self, text="")
@@ -180,7 +165,6 @@ class Reader(Frame):
         self.filename=('TypeA-Left-090414_184123-c.dat')
         self.read_data('/home/pi/Programming/Projects/Wheeze/Data/Hunt/TypeA-Left-090414_184123-c.dat')
         self.process_data()
-        self.calculate_differance()
                 
     def load_pvr_data(self,selection):
         (self.indx , self.filename) = selection
@@ -221,7 +205,6 @@ class Reader(Frame):
         average = np.average(self.raw_y)
         self.norm_y = self.raw_y - average
         self.split_data()
-
     
     def split_data(self):
         cycles = []
@@ -238,14 +221,12 @@ class Reader(Frame):
             if len(c)>max_len:
                 max_len = len(c)
         
-        j=0        
+        self.graph_viewer.clear_data()
         for c in cycles:
             if len(c) > float(max_len*0.9):
                 c = self.process_cycle(c)
                 x =  [i for i in range(len(c))]
-                self.graph_viewer.add_data(x,c)
-                self.cluster.append(bicluster(c,id=j))
-                j+=1      
+                self.graph_viewer.add_data(x,c)        
             
     def process_cycle(self,cycle):
         trace = np.zeros(50)
@@ -261,63 +242,7 @@ class Reader(Frame):
         
         return trace
     
-    def euclidian_distance(self,vect1,vect2):
-        total = 0
-        for i in range (len(vect1)):
-            dif = vect1[i]-vect2[i]
-            total+= dif * dif
-        return math.sqrt(total)
     
-    def calculate_differance(self):
-        currentclustid=-1
-        while len(self.cluster) >1:
-            lowest_pair=(0,1)
-            closest=self.euclidian_distance(self.cluster[0].vec,self.cluster[1].vec)
-            for i in range(len(self.cluster)):
-                for j in range(i+1,len(self.cluster)):
-                    d = self.euclidian_distance(self.cluster[i].vec,self.cluster[j].vec) 
-                    if d<closest:
-                        closest = d
-                        lowest_pair = (i,j)
-            merge_vect = []
-            for n in range(len(self.cluster[lowest_pair[0]].vec)):
-                v_sum = self.cluster[lowest_pair[0]].vec[n]+self.cluster[lowest_pair[1]].vec[n]
-                merge_vect.append(v_sum/2.0)
-                
-            print closest
-            new_cluster=bicluster(merge_vect,left=self.cluster[lowest_pair[0]],
-                             right=self.cluster[lowest_pair[1]],
-                             distance=closest,id=-1)
-
-
-            del self.cluster[lowest_pair[1]]
-            del self.cluster[lowest_pair[0]]
-            self.cluster.append(new_cluster)
-        print(self.print_cluster(self.cluster[0],[]))
-
-    def print_cluster(self,cluster,n_list,labels=None,n=0):
-        # indent to make a hierarchy layout
-        for i in range(n): 
-            print ' ',
-        if cluster.id<0:
-        # negative id means that this is branch
-            print '-'
-            n_list.append((cluster.id,cluster.distance))
-        else:
-        # positive id means that this is an endpoint
-            if labels==None: 
-                print cluster.id
-                n_list.append((cluster.id,cluster.distance))
-            else: 
-                print labels[cluster.id]
-
-        # now print the right and left branches
-        if cluster.left!=None: 
-            n_list = self.print_cluster(cluster.left,n_list,labels=labels,n=n+1)
-        if cluster.right!=None: 
-            n_list = self.print_cluster(cluster.right,n_list,labels=labels,n=n+1)
-        return n_list
-        
 def main():
   
     root = Tk()
