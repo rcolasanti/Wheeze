@@ -34,6 +34,7 @@ import math
 import matplotlib.pyplot as plt
 from scipy.cluster import hierarchy as hier
 from pylab import rcParams
+import random
 
 class TkinterGraph(Frame):
 
@@ -198,14 +199,14 @@ class Reader(Frame):
         
     def read_data(self,d_file):
         s_array=[]
-        count = 0
+        n = 0
         with open(d_file) as f:
             for line in f:
                 data = line.split(',')
                 if data[0]!='':
                     s_array.append(float(data[0]))
-                    self.labels.append(self.filename+"{"+str(count)+"}")
-                    count+=1
+                    #s_array.append(float(data[0])+(random.random()*3))
+                    n+=1
         self.raw_y = np.array(s_array) 
         self.raw_x = [i for i in range(len(self.raw_y))]
 
@@ -256,6 +257,7 @@ class Reader(Frame):
                 x =  [i for i in range(len(c))]
                 self.graph_viewer.add_data(x,c)
                 self.cluster.append(Bicluster(c))
+                self.labels.append(self.filename+"{"+str(j)+"}")
                 j+=1      
             
     def process_cycle(self,cycle):
@@ -281,12 +283,16 @@ class Reader(Frame):
     
     def calculate_differance(self):
         currentclustid=-1
+        nnm=[]
+        distances={}
         while len(self.cluster) >1:
             lowest_pair=(0,1)
             closest=self.euclidian_distance(self.cluster[0].vec,self.cluster[1].vec)
             for i in range(len(self.cluster)):
                 for j in range(i+1,len(self.cluster)):
-                    d = self.euclidian_distance(self.cluster[i].vec,self.cluster[j].vec) 
+                    if (self.cluster[i].id,self.cluster[j].id) not in distances:
+                        distances[self.cluster[i].id,self.cluster[j].id] = self.euclidian_distance(self.cluster[i].vec,self.cluster[j].vec) 
+                    d = distances[self.cluster[i].id,self.cluster[j].id]
                     if d<closest:
                         closest = d
                         lowest_pair = (i,j)
@@ -300,14 +306,15 @@ class Reader(Frame):
             c2 = self.cluster[lowest_pair[1]]
             cnodes = c1.nodes+c2.nodes
             new_cluster=Bicluster(merge_vect,left=c1,right=c2,distance=closest,nodes = cnodes)
-                             
+            nnm.append([new_cluster.left.id,new_cluster.right.id,new_cluster.distance,new_cluster.nodes])                 
 
 
             del self.cluster[lowest_pair[1]]
             del self.cluster[lowest_pair[0]]
             self.cluster.append(new_cluster)
-        nnm = self.print_cluster(self.cluster[0],[])
-        rcParams['figure.figsize'] = 10, 10
+
+
+        rcParams['figure.figsize'] = 10, 20
         plt.title("Clusters ")
         hier.dendrogram(nnm,color_threshold=1.3,labels=self.labels,show_leaf_counts=True,orientation="right")
         plt.tick_params(\
@@ -321,15 +328,6 @@ class Reader(Frame):
         plt.savefig('ward_clusters.png', dpi=200) 
         plt.show()
 
-
-    def print_cluster(self,cluster,n_list):
-        if cluster.left!=None: 
-            n_list = self.print_cluster(cluster.left,n_list)
-        if cluster.right!=None: 
-            n_list = self.print_cluster(cluster.right,n_list)
-        if (cluster.left!=None) and (cluster.right!=None):
-            n_list.append([cluster.left.id,cluster.right.id,cluster.distance,cluster.nodes])
-        return n_list
         
 def main():
   
